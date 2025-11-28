@@ -1,15 +1,17 @@
 // nodemailer.js
-require('dotenv').config();
 const nodemailer = require('nodemailer');
 
 // Create transporter with Hostinger SMTP
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.hostinger.com',
-    port: parseInt(process.env.SMTP_PORT) || 465,
-    secure: process.env.SMTP_SECURE === 'true', // true for 465
+    port: parseInt(process.env.SMTP_PORT) || 587, // Changed to 587 for STARTTLS
+    secure: false, // false for port 587, use STARTTLS
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
+    },
+    tls: {
+        rejectUnauthorized: false // Accept self-signed certificates
     }
 });
 
