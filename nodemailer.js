@@ -1,15 +1,25 @@
 // nodemailer.js
 require('dotenv').config();
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const fromEmail = process.env.FROM_EMAIL || 'onboarding@resend.dev';
+// Create transporter with Hostinger SMTP
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.hostinger.com',
+    port: parseInt(process.env.SMTP_PORT) || 465,
+    secure: process.env.SMTP_SECURE === 'true', // true for 465
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
+
+const fromEmail = process.env.EMAIL_USER || 'info@beeseek.site';
 
 // Function to send verification email
 const sendVerificationEmail = async (to, verificationCode, userName = '') => {
     try {
-        const { data, error } = await resend.emails.send({
-            from: `BeeSeek <${fromEmail}>`, 
+        const info = await transporter.sendMail({
+            from: `"BeeSeek" <${fromEmail}>`, 
             to: to,
             subject: 'Verify Your BeeSeek Account',
             html: `
@@ -43,24 +53,23 @@ const sendVerificationEmail = async (to, verificationCode, userName = '') => {
             `
         });
 
-        if (error) {
-            console.error('Error sending verification email:', error);
-            return { success: false, error: error.message };
+        // Nodemailer success
+        console.log("Email sent:", info.messageId);
+        return { success: true, messageId: info.messageId };
+    } catch (error) {
         }
 
         console.log('✅ Verification email sent:', data.id);
         return { success: true, messageId: data.id };
     } catch (error) {
-        console.error('Error sending verification email:', error);
-        return { success: false, error: error.message };
     }
 };
 
 // Function to send password reset email
 const sendPasswordResetEmail = async (to, resetCode, userName = '') => {
     try {
-        const { data, error } = await resend.emails.send({
-            from: `BeeSeek <${fromEmail}>`,
+        const info = await transporter.sendMail({
+            from: `"BeeSeek" <${fromEmail}>`,
             to: to,
             subject: 'Reset Your Password',
             html: `
@@ -94,24 +103,23 @@ const sendPasswordResetEmail = async (to, resetCode, userName = '') => {
             `
         });
 
-        if (error) {
-            console.error('Error sending password reset email:', error);
-            return { success: false, error: error.message };
+        // Nodemailer success
+        console.log("Email sent:", info.messageId);
+        return { success: true, messageId: info.messageId };
+    } catch (error) {
         }
 
         console.log('✅ Password reset email sent:', data.id);
         return { success: true, messageId: data.id };
     } catch (error) {
-        console.error('Error sending password reset email:', error);
-        return { success: false, error: error.message };
     }
 };
 
 // Function to send welcome email
 const sendWelcomeEmail = async (to, userName) => {
     try {
-        const { data, error } = await resend.emails.send({
-            from: `BeeSeek <${fromEmail}>`,
+        const info = await transporter.sendMail({
+            from: `"BeeSeek" <${fromEmail}>`,
             to: to,
             subject: 'Welcome to BeeSeek',
             html: `
@@ -133,24 +141,23 @@ const sendWelcomeEmail = async (to, userName) => {
             `
         });
 
-        if (error) {
-            console.error('Error sending welcome email:', error);
-            return { success: false, error: error.message };
+        // Nodemailer success
+        console.log("Email sent:", info.messageId);
+        return { success: true, messageId: info.messageId };
+    } catch (error) {
         }
 
         console.log('✅ Welcome email sent:', data.id);
         return { success: true, messageId: data.id };
     } catch (error) {
-        console.error('Error sending welcome email:', error);
-        return { success: false, error: error.message };
     }
 };
 
 // Function to send notification email
 const sendNotificationEmail = async (to, subject, message, userName = '') => {
     try {
-        const { data, error } = await resend.emails.send({
-            from: `BeeSeek <${fromEmail}>`,
+        const info = await transporter.sendMail({
+            from: `"BeeSeek" <${fromEmail}>`,
             to: to,
             subject: subject,
             html: `
@@ -172,16 +179,15 @@ const sendNotificationEmail = async (to, subject, message, userName = '') => {
             `
         });
 
-        if (error) {
-            console.error('Error sending notification email:', error);
-            return { success: false, error: error.message };
+        // Nodemailer success
+        console.log("Email sent:", info.messageId);
+        return { success: true, messageId: info.messageId };
+    } catch (error) {
         }
 
         console.log('✅ Notification email sent:', data.id);
         return { success: true, messageId: data.id };
     } catch (error) {
-        console.error('Error sending notification email:', error);
-        return { success: false, error: error.message };
     }
 };
 
@@ -191,8 +197,8 @@ const sendAgentMagicLink = async (to, agentId, agentName = '') => {
         const verificationToken = Buffer.from(`${agentId}-${Date.now()}`).toString('base64');
         const magicLink = `https://beeseek.site/verify-agent?token=${verificationToken}&agent_id=${agentId}`;
 
-        const { data, error } = await resend.emails.send({
-            from: `BeeSeek <${fromEmail}>`,
+        const info = await transporter.sendMail({
+            from: `"BeeSeek" <${fromEmail}>`,
             to: to,
             subject: 'Verify Your Agent Account',
             html: `
@@ -236,9 +242,10 @@ const sendAgentMagicLink = async (to, agentId, agentName = '') => {
             `
         });
 
-        if (error) {
-            console.error('Error sending magic link email:', error);
-            return { success: false, error: error.message };
+        // Nodemailer success
+        console.log("Email sent:", info.messageId);
+        return { success: true, messageId: info.messageId };
+    } catch (error) {
         }
 
         console.log('✅ Magic link email sent:', data.id);
@@ -248,8 +255,6 @@ const sendAgentMagicLink = async (to, agentId, agentName = '') => {
             verificationToken
         };
     } catch (error) {
-        console.error('Error sending magic link email:', error);
-        return { success: false, error: error.message };
     }
 };
 
@@ -264,7 +269,6 @@ const testEmailConnection = async () => {
         return { success: true, message: 'Resend API is ready' };
     } catch (error) {
         console.error('❌ Resend API check failed:', error);
-        return { success: false, error: error.message };
     }
 };
 
