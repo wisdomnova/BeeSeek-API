@@ -308,9 +308,6 @@ app.post('/send-sos-alert', async (req, res) => {
     if (adminEmails && adminEmails.length > 0) {
       console.log(`📧 Sending email to ${adminEmails.length} admins...`);
 
-      const { Resend } = require('resend');
-      const resend = new Resend(process.env.RESEND_API_KEY);
-
       const emailHtml = `
         <div style="font-family: 'Lato', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background-color: #dc2626; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
@@ -398,21 +395,19 @@ app.post('/send-sos-alert', async (req, res) => {
 
       for (const adminEmail of adminEmails) {
         try {
-          const { data, error } = await resend.emails.send({
-            from: `BeeSeek Safety <${process.env.FROM_EMAIL}>`,
-            to: adminEmail,
-            subject: `🚨 Safety Alert: ${personName} - Assistance Requested`,
-            html: emailHtml
-          });
+          // Use nodemailer instead of Resend
+          const emailResult = await sendNotificationEmail(
+            adminEmail,
+            `🚨 Safety Alert: ${personName} - Assistance Requested`,
+            emailHtml
+          );
 
-          const emailResult = {
+          results.emailResults.push({
             email: adminEmail,
-            success: !error,
-            messageId: data?.id,
-            error: error?.message
-          };
-
-          results.emailResults.push(emailResult);
+            success: emailResult.success,
+            messageId: emailResult.messageId,
+            error: emailResult.error
+          });
 
           // Log email action to database
           try {
