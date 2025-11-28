@@ -57,11 +57,8 @@ const sendVerificationEmail = async (to, verificationCode, userName = '') => {
         console.log("Email sent:", info.messageId);
         return { success: true, messageId: info.messageId };
     } catch (error) {
-        }
-
-        console.log('✅ Verification email sent:', data.id);
-        return { success: true, messageId: data.id };
-    } catch (error) {
+        console.error('❌ Error sending verification email:', error);
+        throw new Error('Failed to send verification email');
     }
 };
 
@@ -107,11 +104,8 @@ const sendPasswordResetEmail = async (to, resetCode, userName = '') => {
         console.log("Email sent:", info.messageId);
         return { success: true, messageId: info.messageId };
     } catch (error) {
-        }
-
-        console.log('✅ Password reset email sent:', data.id);
-        return { success: true, messageId: data.id };
-    } catch (error) {
+        console.error('❌ Error sending password reset email:', error);
+        throw new Error('Failed to send password reset email');
     }
 };
 
@@ -145,11 +139,8 @@ const sendWelcomeEmail = async (to, userName) => {
         console.log("Email sent:", info.messageId);
         return { success: true, messageId: info.messageId };
     } catch (error) {
-        }
-
-        console.log('✅ Welcome email sent:', data.id);
-        return { success: true, messageId: data.id };
-    } catch (error) {
+        console.error('❌ Error sending welcome email:', error);
+        throw new Error('Failed to send welcome email');
     }
 };
 
@@ -183,11 +174,8 @@ const sendNotificationEmail = async (to, subject, message, userName = '') => {
         console.log("Email sent:", info.messageId);
         return { success: true, messageId: info.messageId };
     } catch (error) {
-        }
-
-        console.log('✅ Notification email sent:', data.id);
-        return { success: true, messageId: data.id };
-    } catch (error) {
+        console.error('❌ Error sending notification email:', error);
+        throw new Error('Failed to send notification email');
     }
 };
 
@@ -246,15 +234,8 @@ const sendAgentMagicLink = async (to, agentId, agentName = '') => {
         console.log("Email sent:", info.messageId);
         return { success: true, messageId: info.messageId };
     } catch (error) {
-        }
-
-        console.log('✅ Magic link email sent:', data.id);
-        return { 
-            success: true, 
-            messageId: data.id,
-            verificationToken
-        };
-    } catch (error) {
+        console.error('❌ Error sending magic link email:', error);
+        throw new Error('Failed to send magic link email');
     }
 };
 
