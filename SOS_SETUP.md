@@ -202,7 +202,7 @@ Admins receive:
 ### Test Production
 
 ```bash
-curl -X POST https://beeseek-api.onrender.com/send-sos-alert \
+curl -X POST https://beeseek-api.vercel.app/send-sos-alert \
   -H "Content-Type: application/json" \
   -d '{
     "alertId": "test-123",

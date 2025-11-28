@@ -220,14 +220,13 @@ app.post('/send-sos-alert', async (req, res) => {
     }
 
     // RATE LIMITING: Check for recent alerts from this user (10 minute window)
-    const TEN_MINUTES_AGO = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     const userIdField = alertType === 'agent' ? 'agent_id' : 'user_id';
     
+    // Get the most recent alert for this user
     const { data: recentAlerts, error: alertCheckError } = await supabase
       .from('SOS Alerts')
       .select('id, created_at')
       .eq(userIdField, personId)
-      .gte('created_at', TEN_MINUTES_AGO)
       .order('created_at', { ascending: false })
       .limit(1);
 
@@ -236,28 +235,36 @@ app.post('/send-sos-alert', async (req, res) => {
       // Don't block on error, continue with alert
     } else if (recentAlerts && recentAlerts.length > 0) {
       const lastAlert = recentAlerts[0];
-      const timeSinceLastAlert = Math.floor((Date.now() - new Date(lastAlert.created_at).getTime()) / 1000 / 60);
+      const lastAlertTime = new Date(lastAlert.created_at).getTime();
+      const currentTime = Date.now();
+      const timeSinceLastAlertMs = currentTime - lastAlertTime;
+      const timeSinceLastAlertMinutes = Math.floor(timeSinceLastAlertMs / 1000 / 60);
       
-      console.log(`⚠️ Rate limit hit: User sent alert ${timeSinceLastAlert} minutes ago`);
+      const TEN_MINUTES_MS = 10 * 60 * 1000;
       
-      // Log the attempt to database but don't send notifications
-      await supabase
-        .from('SOS Alert Actions')
-        .insert({
-          sos_id: alertId,
-          action_type: 'rate_limited',
-          recipient: personId,
-          status: 'skipped',
-          result: `Rate limited - last alert sent ${timeSinceLastAlert} minutes ago`
-        });
+      // Only rate limit if less than 10 minutes have passed
+      if (timeSinceLastAlertMs < TEN_MINUTES_MS) {
+        console.log(`⚠️ Rate limit hit: User sent alert ${timeSinceLastAlertMinutes} minutes ago`);
+        
+        // Log the attempt to database but don't send notifications
+        await supabase
+          .from('SOS Alert Actions')
+          .insert({
+            sos_id: alertId,
+            action_type: 'rate_limited',
+            recipient: personId,
+            status: 'skipped',
+            result: `Rate limited - last alert sent ${timeSinceLastAlertMinutes} minutes ago`
+          });
 
-      return res.status(429).json({
-        success: false,
-        error: 'rate_limited',
-        message: `You recently sent an SOS alert ${timeSinceLastAlert} minute(s) ago. Help is on the way. If this is a new emergency, please wait ${10 - timeSinceLastAlert} more minute(s).`,
-        lastAlertTime: lastAlert.created_at,
-        minutesSinceLastAlert: timeSinceLastAlert
-      });
+        return res.status(429).json({
+          success: false,
+          error: 'rate_limited',
+          message: `You recently sent an SOS alert ${timeSinceLastAlertMinutes} minute(s) ago. Help is on the way. If this is a new emergency, please wait ${Math.ceil((TEN_MINUTES_MS - timeSinceLastAlertMs) / 1000 / 60)} more minute(s).`,
+          lastAlertTime: lastAlert.created_at,
+          minutesSinceLastAlert: timeSinceLastAlertMinutes
+        });
+      }
     }
 
     console.log('✅ Rate limit check passed - proceeding with alert');
