@@ -15,7 +15,7 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-const fromEmail = process.env.EMAIL_USER || 'info@beeseek.site';
+const fromEmail = process.env.EMAIL_USER || 'no-reply@beeseek.site';
 
 // Function to send verification email
 const sendVerificationEmail = async (to, verificationCode, userName = '') => {
