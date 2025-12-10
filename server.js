@@ -16,7 +16,23 @@ const {
   sendWelcomeEmail,
   sendNotificationEmail,
   sendAgentMagicLink,
-  testEmailConnection
+  testEmailConnection,
+  sendAutoApprovalWarningEmail,
+  sendAutoApprovalUserEmail,
+  sendAutoApprovalAgentEmail,
+  sendSOSAlertEmail,
+  sendTaskStartingSoonEmail,
+  sendAgentLateNotificationEmail,
+  sendFirstBookingCelebrationEmail,
+  sendHomeSafetyReminderEmail,
+  sendTaskCancellationEmail,
+  sendBookingConfirmationEmail,
+  sendIssueReportEmail,
+  sendBeeCreationEmail,
+  sendBeeTakedownEmail,
+  sendAgentWelcomeKYCEmail,
+  sendAccountSuspensionEmail,
+  sendAccountDeletionEmail
 } = require('./nodemailer');
 
 const {
@@ -192,14 +208,14 @@ app.post('/send-agent-magic-link', async (req, res) => {
     
     res.status(result.success ? 200 : 500).json(result);
   } catch (error) {
-    console.error('❌ Send magic link error:', error);
+    console.error('❌ Send magic link error:', error); 
     res.status(500).json({ 
       success: false, 
       error: 'Failed to send magic link',
       message: error.message 
     });
   }
-});
+}); 
 
 // ✅ NEW: Send SOS Emergency Alert (SMS + Email)
 app.post('/send-sos-alert', async (req, res) => {
@@ -246,12 +262,18 @@ app.post('/send-sos-alert', async (req, res) => {
 
       const smsMessage = `🚨 SAFETY ALERT\n\n${personName} has requested emergency assistance via BeeSeek.\n\nLocation: ${address || 'See map'}\n\nView map: ${mapsLink}\n\nIf you can reach them, please check on their wellbeing.\n\n- BeeSeek Safety Team`;
 
+      // Format phone numbers to include + prefix (required by Termii)
+      const formattedContacts = emergencyContacts.map(contact => ({
+        ...contact,
+        phone: contact.phone.startsWith('+') ? contact.phone : `+${contact.phone}`
+      }));
+
       // DISABLED: Uncomment to enable SMS sending
-      // const smsResults = await sendBulkSMS(emergencyContacts, smsMessage);
+      // const smsResults = await sendBulkSMS(formattedContacts, smsMessage);
       // results.smsResults = smsResults;
 
       // Mock SMS results for testing
-      const smsResults = emergencyContacts.map(contact => ({
+      const smsResults = formattedContacts.map(contact => ({
         phone: contact.phone,
         name: contact.name,
         success: true,
@@ -308,99 +330,21 @@ app.post('/send-sos-alert', async (req, res) => {
     if (adminEmails && adminEmails.length > 0) {
       console.log(`📧 Sending email to ${adminEmails.length} admins...`);
 
-      const emailHtml = `
-        <div style="font-family: 'Lato', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background-color: #dc2626; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-            <h1 style="margin: 0; font-size: 24px;">🚨 Safety Alert - Assistance Requested</h1>
-          </div>
-          
-          <div style="background-color: #f9fafb; padding: 20px; border: 2px solid #dc2626; border-top: none; border-radius: 0 0 8px 8px;">
-            <p style="color: #1e293b; font-size: 15px; margin-top: 0; margin-bottom: 20px;">A BeeSeek user has activated their safety alert. This notification has been sent to their emergency contacts and our safety team for monitoring.</p>
-            <h2 style="color: #1e293b; margin-top: 0;">Alert Details</h2>
-            
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 8px 0; font-weight: bold; color: #64748b;">Alert ID:</td>
-                <td style="padding: 8px 0; color: #1e293b;">${alertId}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; font-weight: bold; color: #64748b;">Type:</td>
-                <td style="padding: 8px 0; color: #1e293b;">${alertType === 'user' ? 'User Emergency' : 'Agent Emergency'}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; font-weight: bold; color: #64748b;">Person:</td>
-                <td style="padding: 8px 0; color: #1e293b;">${personName}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; font-weight: bold; color: #64748b;">Location:</td>
-                <td style="padding: 8px 0; color: #1e293b;">${address || 'Unknown'}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; font-weight: bold; color: #64748b;">Coordinates:</td>
-                <td style="padding: 8px 0; color: #1e293b;">${latitude}, ${longitude}</td>
-              </tr>
-              ${taskId ? `
-              <tr>
-                <td style="padding: 8px 0; font-weight: bold; color: #64748b;">Task ID:</td>
-                <td style="padding: 8px 0; color: #1e293b;">${taskId}</td>
-              </tr>
-              ` : ''}
-              <tr>
-                <td style="padding: 8px 0; font-weight: bold; color: #64748b;">Time:</td>
-                <td style="padding: 8px 0; color: #1e293b;">${new Date().toLocaleString('en-NG', { timeZone: 'Africa/Lagos' })}</td>
-              </tr>
-            </table>
-
-            <div style="margin: 20px 0;">
-              <a href="${mapsLink}" style="display: inline-block; background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">📍 View Location on Map</a>
-            </div>
-
-            <div style="margin: 20px 0;">
-              <a href="https://beeseek-admin.vercel.app/sos-alerts" style="display: inline-block; background-color: #549fe5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">🚨 View in Admin Dashboard</a>
-            </div>
-
-            <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 20px 0;">
-              <p style="margin: 0; color: #78350f; font-size: 14px;">
-                <strong>⚠️ Action Required:</strong> A user has requested assistance. Please review the details and respond appropriately. ${emergencyContacts && emergencyContacts.length > 0 ? 'Their emergency contacts have been notified.' : '<strong>Note: User has no emergency contacts configured.</strong>'}
-              </p>
-            </div>
-
-            ${emergencyContacts && emergencyContacts.length > 0 ? `
-            <div style="margin: 20px 0;">
-              <h3 style="color: #1e293b; font-size: 16px; margin-bottom: 8px;">Emergency Contacts Notified:</h3>
-              <ul style="list-style: none; padding: 0; margin: 0;">
-                ${emergencyContacts.map(contact => `
-                  <li style="padding: 4px 0; color: #64748b;">
-                    ✓ ${contact.name} - ${contact.phone}
-                  </li>
-                `).join('')}
-              </ul>
-            </div>
-            ` : `
-            <div style="margin: 20px 0; background-color: #fee2e2; border: 1px solid #fca5a5; border-radius: 8px; padding: 16px;">
-              <h3 style="color: #991b1b; font-size: 16px; margin: 0 0 8px 0;">⚠️ No Emergency Contacts</h3>
-              <p style="color: #7f1d1d; font-size: 14px; margin: 0;">
-                This user has not configured any emergency contacts. Only BeeSeek admins have been notified of this alert.
-              </p>
-            </div>
-            `}
-          </div>
-
-          <div style="text-align: center; margin-top: 20px; color: #94a3b8; font-size: 12px;">
-            <p>BeeSeek Emergency Response System</p>
-            <p>This is an automated alert. Do not reply to this email.</p>
-          </div>
-        </div>
-      `;
+      const alertData = {
+        alertId,
+        alertType,
+        personName,
+        latitude,
+        longitude,
+        address,
+        taskId,
+        emergencyContacts,
+        timestamp: new Date().toLocaleString('en-NG', { timeZone: 'Africa/Lagos' })
+      };
 
       for (const adminEmail of adminEmails) {
         try {
-          // Use nodemailer instead of Resend
-          const emailResult = await sendNotificationEmail(
-            adminEmail,
-            `🚨 Safety Alert: ${personName} - Assistance Requested`,
-            emailHtml
-          );
+          const emailResult = await sendSOSAlertEmail(adminEmail, alertData);
 
           results.emailResults.push({
             email: adminEmail,
@@ -430,7 +374,7 @@ app.post('/send-sos-alert', async (req, res) => {
           results.emailResults.push({
             email: adminEmail,
             success: false,
-            error: emailError.message
+            error: emailError.error || emailError.message
           });
         }
       }
@@ -461,6 +405,406 @@ app.post('/send-sos-alert', async (req, res) => {
       success: false,
       error: 'Failed to process SOS alert',
       message: error.message
+    });
+  }
+});
+
+// Send auto-approval notification emails
+app.post('/send-auto-approval-emails', async (req, res) => {
+  try {
+    const { 
+      userEmail, 
+      userName, 
+      agentEmail, 
+      agentName, 
+      activityType, 
+      activityTitle, 
+      amount, 
+      emailType 
+    } = req.body;
+    
+    console.log('📧 Received auto-approval email request:', { 
+      userEmail, 
+      userName, 
+      agentEmail, 
+      agentName, 
+      activityType, 
+      activityTitle, 
+      amount,
+      emailType 
+    });
+    
+    if (!activityType || !activityTitle || !amount) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Activity type, title, and amount are required' 
+      });
+    }
+
+    const results = {
+      userEmailSent: false,
+      agentEmailSent: false
+    };
+
+    // Send user email (warning at 20 hours, or confirmation after auto-approval)
+    if (userEmail && userName) {
+      try {
+        if (emailType === 'warning') {
+          await sendAutoApprovalWarningEmail(userEmail, userName, activityType, activityTitle, 4);
+        } else {
+          await sendAutoApprovalUserEmail(userEmail, userName, activityType, activityTitle, amount);
+        }
+        results.userEmailSent = true;
+        console.log('✅ User email sent successfully');
+      } catch (error) {
+        console.error('❌ Failed to send user email:', error);
+      }
+    }
+
+    // Send agent email (only after auto-approval)
+    if (agentEmail && agentName && emailType !== 'warning') {
+      try {
+        await sendAutoApprovalAgentEmail(agentEmail, agentName, activityType, activityTitle, amount);
+        results.agentEmailSent = true;
+        console.log('✅ Agent email sent successfully');
+      } catch (error) {
+        console.error('❌ Failed to send agent email:', error);
+      }
+    }
+
+    const overallSuccess = results.userEmailSent || results.agentEmailSent;
+    
+    res.status(overallSuccess ? 200 : 500).json({
+      success: overallSuccess,
+      ...results,
+      message: overallSuccess 
+        ? 'Auto-approval emails sent successfully' 
+        : 'Failed to send auto-approval emails'
+    });
+  } catch (error) {
+    console.error('❌ Send auto-approval emails error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to send auto-approval emails',
+      message: error.message 
+    });
+  }
+});
+
+// Send task starting soon email
+app.post('/send-task-starting-soon', async (req, res) => {
+  try {
+    const { to, userName, userType, activityType, activityTitle, startTime, address } = req.body;
+    
+    console.log('📧 Received task starting soon email request:', { to, userName, userType, activityType });
+    
+    if (!to || !userName || !activityType || !activityTitle) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Required fields: to, userName, activityType, activityTitle' 
+      });
+    }
+
+    const result = await sendTaskStartingSoonEmail(to, userName, userType, activityType, activityTitle, startTime, address);
+    
+    res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    console.error('❌ Send task starting soon email error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to send task starting soon email',
+      message: error.message 
+    });
+  }
+});
+
+// Send agent late notification email
+app.post('/send-agent-late-notification', async (req, res) => {
+  try {
+    const { to, agentName, taskTitle, userContactInfo } = req.body;
+    
+    console.log('📧 Received agent late notification request:', { to, agentName, taskTitle });
+    
+    if (!to || !agentName || !taskTitle) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Required fields: to, agentName, taskTitle' 
+      });
+    }
+
+    const result = await sendAgentLateNotificationEmail(to, agentName, taskTitle, userContactInfo);
+    
+    res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    console.error('❌ Send agent late notification error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to send agent late notification',
+      message: error.message 
+    });
+  }
+});
+
+// Send first booking celebration email
+app.post('/send-first-booking-celebration', async (req, res) => {
+  try {
+    const { to, name, userType, activityType, bookingDate, bookingTime, serviceName, referenceNumber } = req.body;
+    
+    console.log('📧 Received first booking celebration request:', { to, name, userType, activityType });
+    
+    if (!to || !name || !userType || !activityType) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Required fields: to, name, userType, activityType' 
+      });
+    }
+
+    const result = await sendFirstBookingCelebrationEmail(to, name, userType, activityType, bookingDate, bookingTime, serviceName, referenceNumber);
+    
+    res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    console.error('❌ Send first booking celebration error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to send first booking celebration',
+      message: error.message 
+    });
+  }
+});
+
+// Send home safety reminder email
+app.post('/send-home-safety-reminder', async (req, res) => {
+  try {
+    const { to, agentName, activityType, activityTitle } = req.body;
+    
+    console.log('📧 Received home safety reminder request:', { to, agentName, activityType, activityTitle });
+    
+    if (!to || !agentName || !activityType || !activityTitle) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Required fields: to, agentName, activityType, activityTitle' 
+      });
+    }
+
+    const result = await sendHomeSafetyReminderEmail(to, agentName, activityType, activityTitle);
+    
+    res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    console.error('❌ Send home safety reminder error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to send home safety reminder',
+      message: error.message 
+    });
+  }
+});
+
+// Send task cancellation email
+app.post('/send-task-cancellation', async (req, res) => {
+  try {
+    const { to, userName, taskTitle, cancellationReason } = req.body;
+    
+    console.log('📧 Received task cancellation email request:', { to, userName, taskTitle });
+    
+    if (!to || !userName || !taskTitle) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Required fields: to, userName, taskTitle' 
+      });
+    }
+
+    const result = await sendTaskCancellationEmail(to, userName, taskTitle, cancellationReason);
+    
+    res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    console.error('❌ Send task cancellation email error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to send task cancellation email',
+      message: error.message 
+    });
+  }
+});
+
+// Send booking confirmation email
+app.post('/send-booking-confirmation', async (req, res) => {
+  try {
+    const { to, userName, userType, bookingData } = req.body;
+    
+    console.log('📧 Received booking confirmation request:', { to, userName, userType });
+    
+    if (!to || !userName || !userType || !bookingData) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Required fields: to, userName, userType, bookingData' 
+      });
+    }
+
+    const result = await sendBookingConfirmationEmail(to, userName, userType, bookingData);
+    
+    res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    console.error('❌ Send booking confirmation error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to send booking confirmation',
+      message: error.message 
+    });
+  }
+});
+
+app.post('/send-issue-report', async (req, res) => {
+  try {
+    const { to, userName, issueId, issueDescription } = req.body;
+    
+    console.log('📧 Received issue report email request:', { to, userName, issueId });
+    
+    if (!to || !userName || !issueId || !issueDescription) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Required fields: to, userName, issueId, issueDescription' 
+      });
+    }
+
+    const result = await sendIssueReportEmail(to, userName, issueId, issueDescription);
+    
+    res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    console.error('❌ Send issue report email error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to send issue report email',
+      message: error.message 
+    });
+  }
+});
+
+app.post('/send-bee-creation', async (req, res) => {
+  try {
+    const { to, agentName, beeTitle, beeCategory } = req.body;
+    
+    console.log('📧 Received bee creation email request:', { to, agentName, beeTitle });
+    
+    if (!to || !agentName || !beeTitle || !beeCategory) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Required fields: to, agentName, beeTitle, beeCategory' 
+      });
+    }
+
+    const result = await sendBeeCreationEmail(to, agentName, beeTitle, beeCategory);
+    
+    res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    console.error('❌ Send bee creation email error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to send bee creation email',
+      message: error.message 
+    });
+  }
+});
+
+app.post('/send-bee-takedown', async (req, res) => {
+  try {
+    const { to, agentName, beeTitle, takedownReason } = req.body;
+    
+    console.log('📧 Received bee takedown email request:', { to, agentName, beeTitle });
+    
+    if (!to || !agentName || !beeTitle || !takedownReason) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Required fields: to, agentName, beeTitle, takedownReason' 
+      });
+    }
+
+    const result = await sendBeeTakedownEmail(to, agentName, beeTitle, takedownReason);
+    
+    res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    console.error('❌ Send bee takedown email error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to send bee takedown email',
+      message: error.message 
+    });
+  }
+});
+
+app.post('/send-agent-welcome-kyc', async (req, res) => {
+  try {
+    const { to, agentName } = req.body;
+    
+    console.log('📧 Received agent welcome KYC email request:', { to, agentName });
+    
+    if (!to || !agentName) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Required fields: to, agentName' 
+      });
+    }
+
+    const result = await sendAgentWelcomeKYCEmail(to, agentName);
+    
+    res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    console.error('❌ Send agent welcome KYC email error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to send agent welcome KYC email',
+      message: error.message 
+    });
+  }
+});
+
+app.post('/send-account-suspension', async (req, res) => {
+  try {
+    const { to, userName, userType, violationReason, suspensionDuration } = req.body;
+    
+    console.log('📧 Received account suspension email request:', { to, userName, userType });
+    
+    if (!to || !userName || !userType || !violationReason) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Required fields: to, userName, userType, violationReason' 
+      });
+    }
+
+    const result = await sendAccountSuspensionEmail(to, userName, userType, violationReason, suspensionDuration || '');
+    
+    res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    console.error('❌ Send account suspension email error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to send account suspension email',
+      message: error.message 
+    });
+  }
+});
+
+app.post('/send-account-deletion', async (req, res) => {
+  try {
+    const { to, userName, userType } = req.body;
+    
+    console.log('📧 Received account deletion email request:', { to, userName, userType });
+    
+    if (!to || !userName || !userType) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Required fields: to, userName, userType' 
+      });
+    }
+
+    const result = await sendAccountDeletionEmail(to, userName, userType);
+    
+    res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    console.error('❌ Send account deletion email error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to send account deletion email',
+      message: error.message 
     });
   }
 });
